@@ -1,0 +1,14 @@
+# Secrets — .env holds LLM endpoint + API key, never commit
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Batch outputs
+batch/answers.csv
+batch/results/
+
+# OS
+.DS_Store

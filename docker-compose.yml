@@ -1,0 +1,44 @@
+# MiddleDock full stack
+# Run: docker compose up
+# First time: docker compose run agent python vector-db/ingest.py --docs-dir docs/policies
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  agent:
+    image: middledock-agent:latest
+    ports:
+      - "7860:7860"
+    environment:
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://host.docker.internal:8000/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-tok_middledock}
+      - LLM_MODEL=${LLM_MODEL:-Qwen/Qwen2.5-7B-Instruct-AWQ}
+      - QDRANT_URL=http://qdrant:6333
+      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+
+  # Ingest docs — run once: docker compose run ingest
+  ingest:
+    image: middledock-agent:latest
+    command: python vector-db/ingest.py --docs-dir docs/policies
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+    depends_on:
+      - qdrant
+    profiles:
+      - setup
+
+  # vLLM runs separately on GPU (RunPod or EKS)
+  # Set LLM_BASE_URL in .env to point to it
+
+volumes:
+  qdrant_data:
