@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent
+  namespace: middledock
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: middledock-agent
+  template:
+    metadata:
+      labels:
+        app: middledock-agent
+    spec:
+      containers:
+        - name: agent
+          # Built/pushed by the repo's GitHub Actions workflow (linux/amd64).
+          # Pin a SHA tag for real deploys; latest is fine for the lab.
+          image: ozunuane/middledock-agent:latest
+          ports:
+            - containerPort: 7860
+          env:
+            # Cross-namespace ClusterIP — the whole point of running in-cluster
+            - name: LLM_BASE_URL
+              value: "http://vllm-vllm.inference.svc:8000/v1"
+            - name: LLM_API_KEY
+              value: "unused" # vLLM on EKS runs without --api-key (ClusterIP only)
+            - name: LLM_MODEL
+              value: "Qwen/Qwen2.5-7B-Instruct-AWQ"
+            - name: QDRANT_URL
+              value: "http://qdrant.middledock.svc:6333"
+            - name: EMBEDDING_MODEL
+              value: "sentence-transformers/all-MiniLM-L6-v2"
+          resources:
+            requests: { cpu: "500m", memory: "1.5Gi" }
+            limits: { memory: "3Gi" }
+          readinessProbe:
+            httpGet: { path: /, port: 7860 }
+            initialDelaySeconds: 30 # embedding model loads on boot
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent
+  namespace: middledock
+spec:
+  type: ClusterIP
+  selector:
+    app: middledock-agent
+  ports:
+    - port: 7860
+      targetPort: 7860

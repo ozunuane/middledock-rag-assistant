@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ingest-policies
+  namespace: middledock
+  annotations:
+    # Argo CD: re-run the job on every sync where its manifest changed
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: ingest
+          image: ozunuane/middledock-agent:latest
+          command: ["python", "vector-db/ingest.py", "--docs-dir", "docs/policies"]
+          env:
+            - name: QDRANT_URL
+              value: "http://qdrant.middledock.svc:6333"
+            - name: EMBEDDING_MODEL
+              value: "sentence-transformers/all-MiniLM-L6-v2"
+          resources:
+            requests: { cpu: "500m", memory: "1Gi" }
