@@ -23,7 +23,7 @@ spec:
           env:
             # Cross-namespace ClusterIP — the whole point of running in-cluster
             - name: LLM_BASE_URL
-              value: "http://vllm-vllm.inference.svc:8000/v1"
+              value: "http://pd-proxy.inference.svc:8000/v1" # disaggregated P/D backend (combined vllm parked)
             - name: LLM_API_KEY
               value: "unused" # vLLM on EKS runs without --api-key (ClusterIP only)
             - name: LLM_MODEL
